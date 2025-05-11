@@ -11,9 +11,10 @@ import {
   Divider
 } from '@chakra-ui/react';
 import { useState, useEffect } from 'react';
-import { getRecipes } from '../utils/localStorageHelpers';
+import { getRecipes, getFavorites } from '../utils/localStorageHelpers';
 import RecipeCard from '../components/RecipeCard';
 import { useNavigate } from 'react-router-dom';
+
 
 
 const Home = () => {
@@ -21,6 +22,7 @@ const Home = () => {
   const [busqueda, setBusqueda] = useState('');
   const [tipoDieta, setTipoDieta] = useState('');
   const [dificultad, setDificultad] = useState('');
+  const [recomendadas, setRecomendadas] = useState([]);
   const navigate = useNavigate();
 
   const cargarRecetas = () => {
@@ -36,8 +38,30 @@ const Home = () => {
     setRecetas(filtradas.slice(0, 3));
   };
 
+  const generarRecomendaciones = () => {
+    const all = getRecipes();
+    const favIds = getFavorites();
+    const favoritos = all.filter(r => favIds.includes(r.id));
+  
+    if (favoritos.length === 0) {
+      setRecomendadas([]);
+      return;
+    }
+  
+    const tipos = new Set(favoritos.map(f => f.tipo));
+    const dificultades = new Set(favoritos.map(f => f.dificultad));
+  
+    const sugeridas = all.filter(r =>
+      !favIds.includes(r.id) &&
+      (tipos.has(r.tipo) || dificultades.has(r.dificultad))
+    );
+  
+    setRecomendadas(sugeridas.slice(0, 2)); // mostramos 2
+  };
+
   useEffect(() => {
     cargarRecetas();
+    generarRecomendaciones();
   }, [busqueda, tipoDieta, dificultad]);
   
 
@@ -95,7 +119,19 @@ const Home = () => {
         ))}
       </SimpleGrid>
 
-      <HStack justify="space-between" mt={8}>
+      {recomendadas.length > 0 && (
+        <Box mt={10}>
+          <Heading size="md" mb={4}>Recomendado para ti</Heading>
+          <SimpleGrid columns={[1, 2, 3]} spacing={6}>
+            {recomendadas.map((receta) => (
+              <RecipeCard key={receta.id} receta={receta} />
+            ))}
+          </SimpleGrid>
+        </Box>
+      )}
+
+      
+<HStack justify="space-between" mt={8}>
       <Button
         colorScheme="green"
         variant="outline"
@@ -107,7 +143,6 @@ const Home = () => {
       >
         Ver más recetas
       </Button>
-        <Button colorScheme="green" variant="solid">Recomendaciones</Button>
       </HStack>
 
       <Text mt={10} fontSize="sm" color="gray.500" textAlign="center">
